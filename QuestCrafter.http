@@ -1,0 +1,6 @@
+@QuestCrafter_HostAddress = http://localhost:5208
+
+GET {{QuestCrafter_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
