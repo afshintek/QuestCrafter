@@ -6,8 +6,12 @@ namespace QuestCrafter.Models
     {
         [Key]
         public int QuestId { get; set; }
-        public string? Title { get; set; }
-        public string? Description { get; set; }
+
+        
+        [Required]public required string Title { get; set; }
+        [Required]public string? Description { get; set; } = string.Empty;
+
+
         public ICollection<string>? PictureUrl {get; set;}
         public DateTime CreatedAt { get; set; }
         public DateTime Deadline { get; set; }
