@@ -9,7 +9,7 @@ namespace QuestCrafter.Controllers
 {   
     [Authorize]
     [ApiController]
-    [Route("api/Quest")]
+    [Route("api/Quests")]
     public class ParticipantController : Controller
     {
         private readonly AppDbCtx _ctx;
@@ -17,11 +17,11 @@ namespace QuestCrafter.Controllers
         public ParticipantController (AppDbCtx ctx, IWebHostEnvironment env) {_ctx = ctx; _env = env; Directory.CreateDirectory(Path.Combine(_env.ContentRootPath, "CompletedMissionPictures"));}
 
 
-        [Route("join/{questID}")]
+        [Route("{questID}/join")]
         [HttpPost]
         public async Task<IActionResult> JoinQuest(int questid)
         {
-            var UserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+            var UserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new Exception("NameIdentifier claim is missing"));
             var quest = await _ctx.QuestsTable.FindAsync(questid);
             if (quest == null) {return NotFound("the Quest doesn't exists!");}
             if (_ctx.participantsTable.Any(p => p.UserId == UserId && p.QuestId == quest.QuestId)) {return BadRequest("Yout Already Joined This Quest!");}
@@ -40,10 +40,10 @@ namespace QuestCrafter.Controllers
 
 
 
-        [HttpPost("completed/{participantID}")]
+        [HttpPost("{participantID}/completed")]
         public async Task<IActionResult> CompletedQuest(int participantid, IFormFileCollection files)
         {
-            var UserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+            var UserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new Exception("NameIdentifier claim is missing"));
             var Participant = await _ctx.participantsTable.Include(p => p.Quest).FirstAsync(p => p.ParticipantId == participantid);
             // var Participant = await _ctx.participantsTable.FindAsync(participantid);
 

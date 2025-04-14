@@ -53,6 +53,19 @@ namespace ApplicationDatabaseContext
             .HasForeignKey(l => l.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
+
+            // not nessesary cuz we defined this relationship already(but reversed)
+            builder.Entity<LeaderBoard>()
+            .HasOne(l => l.Quest)
+            .WithMany(q => q.LeaderBoards)
+            .HasForeignKey(l => l.QuestId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+            //Index to prevent duplicate ratings
+            builder.Entity<LeaderBoard>()
+            .HasIndex(l => new {l.QuestId, l.UserId, l.RaterId})
+            .IsUnique();
+
         }
     }
 }

@@ -7,20 +7,71 @@ I got the idea from an AI-chat bot and it sounded challenging and kindda cool, a
 
 ---
 
-## 🎯 What's the idea?
+## Project Description
 
-**QuestCrafter** is basically a real-life quest planner.  
-The idea is simple:
+**What is it?**  
+A bare-bones ASP.NET Core API for a social challenge app. Users can create quests, join others, complete them with picture proof, rate participants (1-100), and view leaderboards.
 
-- Create small, real-life "quests" (like *Try a weird food*, *Visit a new place*, *Learn a dance move*)
-- Break them down into steps
-- Set deadlines
-- Invite friends to join in
-- Everyone tracks their progress, and there's a fun leaderboard
+**What’s built so far?**  
+- **Auth**: Register and log in to get a JWT token.
+- **Quests**: Create quests with titles, descriptions, deadlines, and up to 5 pics.
+- **Participation**: Join quests, mark them complete with pics.
+- **Rating**: Score completed participants (1-100).
+- **Views**: See all quests, filtered lists, leaderboards, or single quest details.
 
-Not a game, not a fitness app — just something to make everyday life a little more adventurous.
+## How to Use It
 
----
+It’s an API, so use tools like Postman:
+
+1. Register: `POST /api/auth/register` (send `username`, `password`).
+2. Login: `POST /api/auth/login` (get JWT token).
+3. Create quest: `POST /api/quest/create` (title, description, deadline, pics).
+4. Join: `POST /api/quests/{questId}/join`.
+5. Complete: `POST /api/quests/{participantId}/complete` (upload pics).
+6. Rate: `POST /api/quests/{questId}/rate` (participantId, score).
+7. View: `GET /api/quest/GetQuests`, `GET /api/quest/getquest/{id}`, `GET /api/quests/{questId}/ratings`.
+
+## How to Run It Locally
+
+1. **Clone**:  
+   ```bash
+   git clone <repo-url>
+
+    Requirements:
+        .NET 8 SDK
+        SQLite (or your DB)
+    Setup:
+        Create appsettings.json with:
+        json
+
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Data Source=questcrafter.db"
+  },
+  "Jwt": {
+    "Issuer": "yourdomain.com",
+    "Audience": "yourdomain.com",
+    "Key": "your-secret-key-32-chars-long!!"
+  }
+}
+Run migrations (if using EF Core CLI):
+bash
+
+    dotnet ef database update
+
+Install:
+bash
+dotnet restore
+Run:
+bash
+
+    dotnet run
+    Test:
+    Hit https://localhost:5001/api/auth/register in Postman.
+
+Note
+
+No frontend yet—just API. Use Postman or curl to interact.
 
 ## ⚙️ Tech Stack (so far)
 

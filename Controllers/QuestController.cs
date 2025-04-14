@@ -3,6 +3,7 @@ using ApplicationDatabaseContext;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using QuestCrafter.Models;
 
 namespace QuestCrafter.Controllers
@@ -23,9 +24,9 @@ namespace QuestCrafter.Controllers
 
         
         [HttpPost]
-        public async Task<IActionResult> CreateQuest([FromForm]QuestDTO quest, IFormFileCollection files /*= Request.Form.Files*/) //in the form, if key name doesn't match IFormFile name, key valye won't be accessable via IFormFile(can find it in request.form.file) and also IFormFile will be empty.
+        public async Task<IActionResult> Create([FromForm]QuestDTO quest, IFormFileCollection files /*= Request.Form.Files*/) //in the form, if key name doesn't match IFormFile name, key valye won't be accessable via IFormFile(can find it in request.form.file) and also IFormFile will be empty.
         {
-            var UserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+            var UserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new Exception("NameIdentifier claim is missing"));
             if (!ModelState.IsValid) {return BadRequest(ModelState);}
             
             var q = _mapper.Map<Quest>(quest);
@@ -59,5 +60,140 @@ namespace QuestCrafter.Controllers
             return Ok(new {msg = "created quest", QuestID = q.QuestId, q.PictureUrl});
         }
 
+        // [HttpGet]
+        // public async Task<IActionResult> All()
+        // {
+        //     var quests = await _ctx.QuestsTable
+        //         .Include(q => q.Participants)
+        //             .ThenInclude(p => p.User)
+        //         .Include(q => q.LeaderBoards)
+        //         .Select(q => new
+        //         {
+        //             QuestId = q.QuestId,
+        //             Title = q.Title,
+        //             Description = q.Description,
+        //             Deadline = q.Deadline,
+        //             CreatedAt = q.CreatedAt,
+        //             PictureUrls = q.PictureUrl,
+        //             CreatorId = q.CreatorId,
+        //             CreatorUsername = q.Creator.UserName,
+        //             Participants = q.Participants.Select(p => new
+        //             {
+        //                 ParticipantId = p.ParticipantId,
+        //                 UserId = p.UserId,
+        //                 Username = p.User.UserName,
+        //                 IsCompleted = p.IsCompleted,
+        //                 CompletionDate = p.CompletionDate,
+        //                 CompletionPictureUrls = p.CompletionPictureUrl,
+        //                 AverageScore = _ctx.LeaderTable
+        //                     .Where(l => l.QuestId == q.QuestId && l.UserId == p.UserId)
+        //                     .Average(l => (double?)l.Score) ?? 0,
+        //                 RatingsCount = _ctx.LeaderTable
+        //                     .Count(l => l.QuestId == q.QuestId && l.UserId == p.UserId)
+        //             }).ToList()
+        //         })
+        //         .ToListAsync();
+
+        //     return Ok(new { Msg = "All quests retrieved", Quests = quests });
+        // }
+
+        [HttpGet]
+        public async Task<IActionResult> GetQuests(int? userId, string? status = "all")
+        {
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new Exception("NameIdentifier claim is missing"));
+
+            var query = _ctx.QuestsTable
+                .AsQueryable();
+
+            // Filter by userId (creator or participant)
+            if (userId.HasValue)
+            {
+                query = query.Where(q => q.CreatorId == userId.Value || 
+                    q.Participants.Any(p => p.UserId == userId.Value));
+            }
+
+            // Filter by status
+            if (status?.ToLower() == "active")
+                query = query.Where(q => q.Deadline > DateTime.UtcNow);
+            else if (status?.ToLower() == "completed")
+                query = query.Where(q => q.Deadline <= DateTime.UtcNow);
+
+            // Fetch with projection to avoid loops
+            var quests = await query
+                .Select(q => new
+                {
+                    QuestId = q.QuestId,
+                    Title = q.Title,
+                    Description = q.Description,
+                    Deadline = q.Deadline,
+                    CreatedAt = q.CreatedAt,
+                    PictureUrls = q.PictureUrl,
+                    CreatorId = q.CreatorId,
+                    CreatorUsername = q.Creator.UserName,
+                    Participants = q.Participants.Select(p => new
+                    {
+                        ParticipantId = p.ParticipantId,
+                        UserId = p.UserId,
+                        Username = p.User.UserName,
+                        IsCompleted = p.IsCompleted,
+                        CompletionDate = p.CompletionDate,
+                        CompletionPictureUrls = p.CompletionPictureUrl,
+                        AverageScore = q.LeaderBoards
+                            .Where(l => l.UserId == p.UserId)
+                            .Average(l => (double?)l.Score) ?? 0,
+                        RatingsCount = q.LeaderBoards
+                            .Count(l => l.UserId == p.UserId)
+                    }).ToList()
+                })
+                .ToListAsync();
+
+            return Ok(new { Msg = "Quests retrieved", Quests = quests });
+        }
+
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetQuest(int id)
+        {
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new Exception("NameIdentifier claim is missing"));
+
+            var quest = await _ctx.QuestsTable
+                .Where(q => q.QuestId == id)
+                .Select(q => new
+                {
+                    QuestId = q.QuestId,
+                    Title = q.Title,
+                    Description = q.Description,
+                    Deadline = q.Deadline,
+                    CreatedAt = q.CreatedAt,
+                    PictureUrls = q.PictureUrl,
+                    CreatorId = q.CreatorId,
+                    CreatorUsername = q.Creator.UserName,
+                    Participants = q.Participants.Select(p => new
+                    {
+                        ParticipantId = p.ParticipantId,
+                        UserId = p.UserId,
+                        Username = p.User.UserName,
+                        IsCompleted = p.IsCompleted,
+                        CompletionDate = p.CompletionDate,
+                        CompletionPictureUrls = p.CompletionPictureUrl,
+                        AverageScore = q.LeaderBoards
+                            .Where(l => l.UserId == p.UserId)
+                            .Average(l => (double?)l.Score) ?? 0,
+                        RatingsCount = q.LeaderBoards
+                            .Count(l => l.UserId == p.UserId)
+                    }).ToList()
+                })
+                .FirstOrDefaultAsync();
+
+            if (quest == null)
+                return NotFound("Quest not found");
+
+            // Optional: Ensure user is in quest
+            // if (!quest.Participants.Any(p => p.UserId == currentUserId) && quest.CreatorId != currentUserId)
+            //     // return Forbid("You must be in the quest or its creator");
+            //     return StatusCode(403, "You must be in the quest or its creator");
+
+            return Ok(new { Msg = "Quest retrieved", Quest = quest });
+        }
     }
 }

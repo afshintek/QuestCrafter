@@ -6,12 +6,13 @@ namespace QuestCrafter.Models
     {
         [Key]
         public int LeaderBoardId { get; set; }
-        public int QuestId { get; set; } // Foreign key to Quest
-        public required Quest Quest { get; set; } // Navigation to quest
+        [Required]public int QuestId { get; set; } // Foreign key to Quest
+        public Quest? Quest { get; set; } = null!; // Navigation to quest
 
-        public int UserId { get; set; } // Foreign key to User
-        public required User User { get; set; }  // Navigation to user
+        [Required]public int UserId { get; set; } // Foreign key to User
+        public User User { get; set; } = null!;  // Navigation to user
 
+        public int RaterId { get; set; } //Who gave the score
         public int Score { get; set; }
     }
 }

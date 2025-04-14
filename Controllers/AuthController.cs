@@ -42,9 +42,15 @@ namespace QuestCrafter.Controllers
         {
             if (!ModelState.IsValid) {return BadRequest(ModelState);}
 
+            // var user = !string.IsNullOrEmpty(model.username)
+            //     ? await _userManager.FindByNameAsync(model.username)
+            //     : await _userManager.FindByEmailAsync(model.email);
+
             var user = !string.IsNullOrEmpty(model.username)
                 ? await _userManager.FindByNameAsync(model.username)
-                : await _userManager.FindByEmailAsync(model.email);
+                : !string.IsNullOrEmpty(model.email) ?
+                    await _userManager.FindByEmailAsync(model.email)
+                    : null;
             
             if (user == null || ! await _userManager.CheckPasswordAsync(user, model.password)) {return Unauthorized("Invalid credentials");}
             var token = jwtGenerator(user);
@@ -57,10 +63,10 @@ namespace QuestCrafter.Controllers
         {
             var claims = new[]
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.UserName)
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString() ?? throw new InvalidOperationException("User ID is null")),
+                new Claim(ClaimTypes.Name, user.UserName ?? throw new InvalidOperationException("Username is null"))
             };
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["jwt:key"]));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["jwt:key"] ?? throw new ArgumentNullException("JWT Key is missing in config")));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],
